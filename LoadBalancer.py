@@ -2,6 +2,7 @@ from pox.core import core
 from pox.lib.addresses import IPAddr, EthAddr
 from FlowRule import FlowRuleManager
 from ArpHandler import ARPHandler
+import random
 
 log = core.getLogger()
 
@@ -37,9 +38,9 @@ class SimpleLoadBalancer:
 
     def handle_arp_packet(self, packet, event):
         arp_packet = packet.payload
-        if arp_packet.opcode == arp.REPLY:
+        if arp_packet.opcode == arp_packet.REPLY:
             self.mac_to_port[IPAddr(arp_packet.protosrc)] = {'server_mac': EthAddr(arp_packet.hwsrc), 'port': event.port}
-        elif arp_packet.opcode == arp.REQUEST:
+        elif arp_packet.opcode == arp_packet.REQUEST:
             if arp_packet.protosrc not in self.mac_to_port:
                 self.client_table[arp_packet.protosrc] = {'client_mac': EthAddr(arp_packet.hwsrc), 'port': event.port}
             if arp_packet.protodst == self.service_ip:
