@@ -39,12 +39,27 @@ class SimpleLoadBalancer:
     def handle_arp_packet(self, packet, event):
         arp_packet = packet.payload
         if arp_packet.opcode == arp_packet.REPLY:
-            self.mac_to_port[IPAddr(arp_packet.protosrc)] = {'server_mac': EthAddr(arp_packet.hwsrc), 'port': event.port}
-        elif arp_packet.opcode == arp_packet.REQUEST:
+            # Check if the ARP reply's source IP is not known as a server, then add it.
             if arp_packet.protosrc not in self.mac_to_port:
+                self.mac_to_port[arp_packet.protosrc] = {'server_mac': EthAddr(arp_packet.hwsrc), 'port': event.port}
+
+        elif arp_packet.opcode == arp_packet.REQUEST:
+            # Check if the ARP request's source IP is not known as a server or a client, then add it to clients.
+            if arp_packet.protosrc not in self.mac_to_port and arp_packet.protosrc not in self.client_table:
                 self.client_table[arp_packet.protosrc] = {'client_mac': EthAddr(arp_packet.hwsrc), 'port': event.port}
+
+            # Send a proxied ARP reply if the ARP request is for the load balancer's IP.
             if arp_packet.protodst == self.service_ip:
-                self.arp_handler.send_proxied_arp_reply(packet, self.connection, event.port, self.lb_mac)
+                log.info("Client %s send ARP req to load balancer %s" % (arp_packet.protosrc, arp_packet.protodst))
+                self.arp_handler.send_proxied_arp_reply(packet, event.connection, event.port, self.lb_mac)
+
+            # Handling server to client ARP requests.
+            elif arp_packet.protosrc in self.mac_to_port and arp_packet.protodst in self.client_table:
+                log.info("Server %s send ARP req to client %s" % (arp_packet.protosrc, arp_packet.protodst))
+                self.arp_handler.send_proxied_arp_reply(packet, event.connection, event.port, self.lb_mac)
+
+            else:
+                log.info("Invalid ARP req")
 
     def handle_ip_packet(self, packet, event):
         ip_packet = packet.payload
@@ -66,9 +81,13 @@ class SimpleLoadBalancer:
 
     def update_lb_mapping(self, client_ip):
         if client_ip not in self.lb_map:
-            selected_server = random.choice(list(self.mac_to_port.keys()))
-            self.lb_map[client_ip] = selected_server
-            log.info("Server selected for client %s: %s" % (client_ip, selected_server))
+            available_servers = [ip for ip in self.mac_to_port if ip in self.server_ips]
+            if available_servers:
+                selected_server = random.choice(available_servers)
+                self.lb_map[client_ip] = selected_server
+                log.info("Server selected for client %s: %s" % (client_ip, selected_server))
+            else:
+                log.error("No available servers for client %s" % client_ip)
 
 
 def launch(ip, servers):
