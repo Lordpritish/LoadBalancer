@@ -35,6 +35,8 @@ class SimpleLoadBalancer:
             self.handle_arp_packet(packet, event)
         elif packet.type == packet.IP_TYPE:
             self.handle_ip_packet(packet, event)
+        else:
+            log.info("Unknown Packet type: %s" % packet.type)
 
     def handle_arp_packet(self, packet, event):
         arp_packet = packet.payload
