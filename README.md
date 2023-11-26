@@ -5,6 +5,14 @@
 - **Yuto Omachi (1006005163)**
 - **Shannon Budiman (1006863770)**
 
+## Table of Contents
+- [Project Proposal: Load Balancer with Dynamic Algorithm Selection Using POX and Mininet in an SDN Environment](#project-proposal-load-balancer-with-dynamic-algorithm-selection-using-pox-and-mininet-in-an-sdn-environment)
+- [Specific Goals and Targets](#specific-goals-and-targets)
+- [Tentative Timeline with Clear Goals and Targets](#tentative-timeline-with-clear-goals-and-targets)
+- [How the Project Relates to the Field of "Computer Networks"](#how-the-project-relates-to-the-field-of-computer-networks)
+- [Installation Steps](#installation-steps)
+
+
 # Project Proposal: Load Balancer with Dynamic Algorithm Selection Using POX and Mininet in an SDN Environment
 
 ## Project Description and Rationale:
@@ -29,8 +37,89 @@ This project aims to implement a load balancer using Software-Defined Networking
 - **Week 3**: Continued testing, UI development, and configuration method.
 - **Week 4**: Final testing, refinement, documentation completion, and project wrap-up.
 
+
 ## How the Project Relates to the Field of "Computer Networks":
 This project aligns with the field of computer networks by addressing the fundamental concept of load balancing within SDN. It demonstrates the potential of SDN technologies in providing flexible and dynamic load balancing solutions for various network scenarios.
+Here's the corrected version:
 
 
----
+# Installation Steps
+
+## Start Mininet VM
+
+Ensure that the VM is connected to the internet.
+
+## Prerequisites
+
+Make sure you have the following prerequisites installed on the Mininet VM:
+
+1. Update the package list:
+
+   ```bash
+   sudo apt-get update
+   ```
+
+2. Install curl:
+
+   ```bash
+   sudo apt-get install curl
+   ```
+
+## Setup
+
+1. Clone this repository:
+
+   ```bash
+   git clone https://github.com/Lordpritish/LoadBalancer.git
+   ```
+
+2. Copy the all files except mytop.py from the repository into the POX extension folder:
+
+   ```bash
+   cp <repository_folder>/files/* ./pox/ext/
+   ```
+4. Copy the `mytop.py`` from the repository into the mininet exmaples folder:
+
+   ```bash
+   cp <repository_folder>/mytop.py ~/mininet/examples/
+   ```
+
+## Running the Load Balancer
+
+1. Navigate to the POX directory:
+
+   ```bash
+   cd ./pox
+   ```
+
+2. Terminate any existing controllers:
+
+   ```bash
+   sudo pox.py killall controller
+   ```
+
+3. Run the load balancer controller:
+
+   ```bash
+   ./pox.py log.level --DEBUG LoadBalancer --ip=10.0.1.1 --servers=10.0.0.1,10.0.0.2,10.0.0.3,10.0.0.4
+   ```
+
+## Running Mininet Example
+
+1. Go to the root folder of the VM and navigate to the Mininet examples directory:
+
+   ```bash
+   cd ~/mininet/examples/
+   ```
+
+2. Clear any existing Mininet configurations:
+
+   ```bash
+   sudo mn -c
+   ```
+
+3. Run the Mininet topology:
+
+   ```bash
+   sudo python ./mytop.py
+   ```
