@@ -179,7 +179,7 @@ class SimpleLoadBalancer:
             
 
         # Server to Client
-        elif ip_packet.srcip in self.servers and (ip_packet.dstip in client_table.keys()):
+        elif ip_packet.srcip in self.servers and (ip_packet.dstip in self.client_table.keys()):
             log.info("Server to Client")
             server_ip = ip_packet.srcip
 
