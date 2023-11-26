@@ -1,7 +1,10 @@
 from pox.lib.packet.arp import arp
+from pox.core import core
 from pox.lib.packet.ethernet import ethernet
 import pox.openflow.libopenflow_01 as of
 from pox.lib.addresses import IPAddr, EthAddr
+
+log = core.getLogger()
 
 class ARPHandler:
     def __init__(self, lb_mac, lb_ip, ethernet_broad):
@@ -13,6 +16,12 @@ class ARPHandler:
         """
         Sends a proxied ARP reply to a client or server pretending to be the destination.
         """
+        # log.debug("Sending proxied ARP reply:")
+        # log.debug("  Packet: %s" % packet)
+        # log.debug("  Source IP: %s, Destination IP: %s" % (packet.payload.protosrc, packet.payload.protodst))
+        # log.debug("  Outport: %s" % outport)
+        # log.debug("  Requested MAC: %s" % requested_mac)
+
         arp_reply = arp()
         arp_reply.hwtype = arp_reply.HW_TYPE_ETHERNET
         arp_reply.prototype = arp_reply.PROTO_TYPE_IP
@@ -32,7 +41,11 @@ class ARPHandler:
         packet_out_msg.data = eth_frame.pack()
         packet_out_msg.actions.append(of.ofp_action_output(port=of.OFPP_IN_PORT))
         packet_out_msg.in_port = outport
+
+        # log.debug("Sending ARP reply packet_out_msg: %s" % packet_out_msg)
+        
         connection.send(packet_out_msg)
+
 
     def send_proxied_arp_request(self, connection, ip):
         """
