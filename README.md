@@ -86,6 +86,34 @@ Make sure you have the following prerequisites installed on the Mininet VM:
 
 ## Running the Load Balancer
 
+Certainly! It looks like you've updated the `launch` function to include an additional parameter for the load balancing algorithm (`alg`). Here's the updated README section to reflect these changes:
+
+```markdown
+# Load Balancer Controller
+
+This POX controller implements a simple load balancing algorithm. It supports three load balancing algorithms:
+
+1. **Random Balancer (`RANDOM`):** Servers are selected randomly.
+
+2. **Round Robin Balancer (`ROUND_ROBIN`):** Servers are selected in a circular sequence.
+
+3. **Weighted Round Robin Balancer (`WEIGHTED_ROUND_ROBIN`):** Servers are selected based on weights assigned to each server.
+
+## Running the Load Balancer Controller
+
+To run the load balancer controller, use the following command:
+
+```bash
+./pox.py log.level --DEBUG LoadBalancer --ip=<controller_ip> --servers=<comma_separated_servers> --alg=<algorithm> --weights=<comma_separated_weights>
+```
+
+- `<controller_ip>`: IP address of the controller.
+- `<comma_separated_servers>`: Comma-separated list of server IP addresses.
+- `<algorithm>`: (Optional) Load balancing algorithm. Available options: 1=`RANDOM`, 2=`ROUND_ROBIN`, 3=`WEIGHTED_ROUND_ROBIN` (default is 1=`RANDOM`).
+- `<comma_separated_weights>`: (Optional) Comma-separated list of weights corresponding to each server (required for `WEIGHTED_ROUND_ROBIN` algorithm).
+
+### Example Usage:
+
 1. Navigate to the POX directory:
 
    ```bash
@@ -103,6 +131,18 @@ Make sure you have the following prerequisites installed on the Mininet VM:
    ```bash
    ./pox.py log.level --DEBUG LoadBalancer --ip=10.0.1.1 --servers=10.0.0.1,10.0.0.2,10.0.0.3,10.0.0.4
    ```
+
+   ```bash
+   ./pox.py log.level --DEBUG LoadBalancer --ip=10.0.1.1 --servers=10.0.0.1,10.0.0.2,10.0.0.3,10.0.0.4 --alg=1
+   ```
+
+   ```bash
+   ./pox.py log.level --DEBUG LoadBalancer --ip=10.0.1.1 --servers=10.0.0.1,10.0.0.2,10.0.0.3,10.0.0.4 --alg=3 --weights=1,2,3,4
+   ```
+
+
+
+
 
 ## Running Mininet Example
 

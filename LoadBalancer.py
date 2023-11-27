@@ -2,14 +2,18 @@ from pox.core import core
 from pox.lib.addresses import IPAddr, EthAddr
 from FlowRule import FlowRuleManager
 from ArpHandler import ARPHandler
+from LoadBalancingAlgthm import RandomBalancer,RoundRobinBalancer,WeightedRoundRobinBalancer,StaticLoadBalancer
 import pox.openflow.libopenflow_01 as of
 import time
 import random
 
 log = core.getLogger()
+RANDOM = 1
+ROUND_ROBIN = 2
+WEIGHTED_ROUND_ROBIN = 3
 
 class SimpleLoadBalancer:
-    def __init__(self, service_ip, servers=[]):
+    def __init__(self, service_ip,algthm:StaticLoadBalancer ,servers=[]):
         core.openflow.addListeners(self)
         self.service_ip = IPAddr(service_ip)
         self.mac = EthAddr("0A:00:00:00:00:01")
@@ -19,9 +23,7 @@ class SimpleLoadBalancer:
         self.arp_handler = ARPHandler(self.mac, self.service_ip, self.ethernet_broad)
         self.server_mac_to_port = {}
         self.client_table = {}
-        self.client_to_server_backup_map = {}
-
-
+        self.balancing_alghtm = algthm
         self.outstanding_probes = {} # IP -> expire_time
         self.probe_cycle_time = 5 # How quickly do we probe?
         self.arp_timeout = 3 # How long do we wait for an ARP reply before we consider a server dead?
@@ -39,9 +41,8 @@ class SimpleLoadBalancer:
         for ip,expire_at in list(self.outstanding_probes.items()):
             if t > expire_at:
                 self.outstanding_probes.pop(ip, None)
-                if ip in self.live_servers:
-                    log.warn("Server %s down", ip)
-                    del self.live_servers[ip]
+                self.balancing_alghtm.delete_server(ip)
+                log.warn("Server %s down", ip)
 
     def _do_probe (self):
         """
@@ -67,11 +68,6 @@ class SimpleLoadBalancer:
         r = max(.25, r) # Cap it at four per second
         return r
 
-    def _pick_server (self):
-        """
-        Pick a server for a (hopefully) new connection
-        """
-        return random.choice(list(self.live_servers.keys()))
 
     def _handle_ConnectionUp(self, event):
         self.connection = event.connection
@@ -105,13 +101,13 @@ class SimpleLoadBalancer:
             if packet_ip in self.outstanding_probes:
                 # A server is (still?) up; cool.
                 del self.outstanding_probes[packet_ip]
-                if (self.live_servers.get(packet_ip, (None,None))
+                if (self.balancing_alghtm.get_server(packet_ip)
                     == (arpp.hwsrc,event.port)):
                 # Ah, nothing new here.
                     pass
                 else:
                     # Ooh, new server.
-                    self.live_servers[packet_ip] = arpp.hwsrc,event.port
+                    self.balancing_alghtm.add_server(packet_ip,arpp.hwsrc,event.port)
                     log.info("Server %s up", packet_ip)
 
             if packet_ip not in self.server_mac_to_port:
@@ -157,22 +153,19 @@ class SimpleLoadBalancer:
 
             client_ip = ip_packet.srcip
 
-            if len(self.live_servers) == 0:
-                self.log.warn("No servers available!")
-                return drop()
 
             # Pick a server
-            server_ip = self._pick_server()
+            server_ip = self.balancing_alghtm.get_next_server()
+            if not server_ip:
+                self.log.warn("No servers available!")
+                return drop()
+            
             log.info("Server selected for client %s: %s" % (client_ip, server_ip))
             
-            # Update mapping for backup
-            self.client_to_server_backup_map[client_ip] = server_ip
-
             server_port = self.server_mac_to_port[server_ip]['port']
             server_mac = self.server_mac_to_port[server_ip]['mac']
             client_mac = self.client_table[client_ip]['mac']
-            self.flow_manager.install_client_to_server(server_port, client_ip, server_ip, server_mac)
-            self.flow_manager.install_server_to_client(in_port, server_ip, client_ip, client_mac)
+    
 
             log.info("send packet out %s  to  %s" % (client_ip, server_ip))
             self.flow_manager.send_packet_out(event.ofp.buffer_id, self.mac, server_mac, client_ip, server_ip, server_port, in_port, packet.next)
@@ -182,21 +175,37 @@ class SimpleLoadBalancer:
         elif ip_packet.srcip in self.servers and (ip_packet.dstip in self.client_table.keys()):
             log.info("Server to Client")
             server_ip = ip_packet.srcip
-
-            # Find corresponding client IP from backup mapping
-            client_ip = next((cip for cip, sip in self.client_to_server_backup_map.items() if sip == server_ip), None)
+            client_ip = ip_packet.dstip
+  
             
-            if client_ip:
-                client_mac = self.client_table[client_ip]['mac']
-                client_port = self.client_table[client_ip]['port']
-                self.flow_manager.install_server_to_client(client_port, server_ip, client_ip, client_mac)
+            client_mac = self.client_table[client_ip]['mac']
+            client_port = self.client_table[client_ip]['port']
 
-                log.info("send packet out %s  to  %s" % (self.service_ip, client_ip))
-                self.flow_manager.send_packet_out(event.ofp.buffer_id, self.mac, self.client_to_server_backup_map[server_ip]['mac'], self.service_ip, client_ip, client_port, in_port, packet.next)
-            else:
-                log.error("Mapping missing. Server IP: %s", server_ip)
+            log.info("send packet out %s  to  %s" % (server_ip, client_ip))
+            self.flow_manager.send_packet_out(event.ofp.buffer_id, self.mac, client_mac, self.service_ip, client_ip, client_port, in_port, packet.next)
+    
 
-def launch(ip, servers):
+def launch(ip, servers,alg=RANDOM,weights=None):
     log.info("Loading Simple Load Balancer module")
     servers = servers.split(',')
-    core.registerNew(SimpleLoadBalancer, ip, servers)
+    weights = [int(weight) for weight in weights.split(',')]
+
+    balancing_algorithm = None
+    alg = int(alg)
+    if alg == RANDOM:
+        balancing_algorithm = RandomBalancer()
+        # print(alg)
+    elif alg == ROUND_ROBIN:
+        balancing_algorithm = RoundRobinBalancer()
+    elif alg == WEIGHTED_ROUND_ROBIN:
+        if weights is not None and len(servers) == len(weights):
+            # assign weights
+            weights_dict = {IPAddr(server_ip): weight for server_ip, weight in zip(servers, weights)}
+            balancing_algorithm = WeightedRoundRobinBalancer(weights_dict)
+        else:
+            log.error("Valid Weights must be provided for WEIGHTED_ROUND_ROBIN algorithm.")
+            return  # Abort if weights are not provided
+    
+
+
+    core.registerNew(SimpleLoadBalancer, ip, balancing_algorithm,servers)
