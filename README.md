@@ -123,3 +123,11 @@ Make sure you have the following prerequisites installed on the Mininet VM:
    ```bash
    sudo python ./mytop.py
    ```
+
+## Generating a Plot
+1. After terminating LoadBalancer, it will generate req_count.txt file which contains log of which server the loader balancer redirected the request to.
+
+2. Run the following command to generate a plot of total # of requests to each server over time
+
+   ``` python3 <Path-to-UIGenerator.py> <Path-to_req_count.txt> ```
+
