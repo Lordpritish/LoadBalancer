@@ -2,6 +2,7 @@ from pox.core import core
 from pox.lib.addresses import IPAddr, EthAddr
 from FlowRule import FlowRuleManager
 from ArpHandler import ARPHandler
+from RequestLogWriter import RequestLogWriter
 import pox.openflow.libopenflow_01 as of
 import time
 import random
@@ -26,6 +27,8 @@ class SimpleLoadBalancer:
         self.probe_cycle_time = 5 # How quickly do we probe?
         self.arp_timeout = 3 # How long do we wait for an ARP reply before we consider a server dead?
         self.live_servers = {} # IP -> MAC,port
+
+        self.req_log_writer = RequestLogWriter(servers)
 
     def _do_expire (self):
         """
@@ -174,6 +177,8 @@ class SimpleLoadBalancer:
             self.flow_manager.install_client_to_server(server_port, client_ip, server_ip, server_mac)
             self.flow_manager.install_server_to_client(in_port, server_ip, client_ip, client_mac)
 
+            self.req_log_writer.write_request(str(server_ip))
+            
             log.info("send packet out %s  to  %s" % (client_ip, server_ip))
             self.flow_manager.send_packet_out(event.ofp.buffer_id, self.mac, server_mac, client_ip, server_ip, server_port, in_port, packet.next)
             
@@ -199,4 +204,5 @@ class SimpleLoadBalancer:
 def launch(ip, servers):
     log.info("Loading Simple Load Balancer module")
     servers = servers.split(',')
+    print(servers)
     core.registerNew(SimpleLoadBalancer, ip, servers)
