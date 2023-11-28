@@ -58,8 +58,8 @@ class LeastResponseTimeBalancer(LoadBalancer):
         self.number_of_servers += 1
 
     def delete_server(self, server):
-        if server in self.list_servers:
-            self.list_servers.remove(server)
+        if server in self.live_servers:
+            self.live_servers.remove(server)
             del self.active_connections[server]
             del self.response_times[server]
     
@@ -103,8 +103,8 @@ class LeastResponseTimeBalancer(LoadBalancer):
 
 
 class RandomBalancer(LoadBalancer):
+
     def get_next_server(self):
-        super().__init__()
         if self.number_of_servers == 0:
             return None
         return random.choice(self.live_servers)

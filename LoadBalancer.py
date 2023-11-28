@@ -35,6 +35,7 @@ class SimpleLoadBalancer:
         self.server_mac_to_port = {} # {ip :  { mac: , port :}}
         self.client_table = {} 
         self.balancing_algorithm = algthm
+        self.ping_probe_start_delay = 5
         
         
         self.outstanding_probes = {} # IP -> expire_time
@@ -91,7 +92,7 @@ class SimpleLoadBalancer:
             self.arp_handler.send_proxied_arp_request(self.connection, ip)
             log.info("SERVER ADDED")
         
-        core.callDelayed(5, self._do_ping_probe) 
+        core.callDelayed(self.ping_probe_start_delay, self._do_ping_probe) 
 
     def _handle_PacketIn(self, event):
         packet = event.parsed
@@ -107,7 +108,7 @@ class SimpleLoadBalancer:
         else:
             log.info("Unknown Packet type: %s" % packet.type)
 
-    def handle_ping_request(self,icmp_pkt,src_ip):
+    def handle_ping_packet(self,icmp_pkt,src_ip):
         if icmp_pkt.type == TYPE_ECHO_REPLY:
             if src_ip in self.outstanding_probes:
                 # A server is (still?) up; cool.
@@ -127,7 +128,8 @@ class SimpleLoadBalancer:
         packet_ip = arpp.protosrc
         
         if arpp.opcode == arpp.REPLY:
-            log.info("ARP REPLY INCOMING")
+            log.info("ARP REPLY INCOMING for %s",packet_ip)
+
             if packet_ip not in self.server_mac_to_port:
                 self.server_mac_to_port[packet_ip] = {'mac': EthAddr(arpp.hwsrc), 'port': event.port}
             return
@@ -240,7 +242,7 @@ class SimpleLoadBalancer:
                 # Pick a server
                 server_ip = self.balancing_algorithm.get_next_server()
                 if not server_ip:
-                    self.log.warn("No servers available!")
+                    log.warn("No servers available!")
                     return drop()
             
             log.info("Server selected for client %s: %s" % (client_ip, server_ip))
@@ -251,7 +253,7 @@ class SimpleLoadBalancer:
     
 
             log.info("send packet out %s  to  %s" % (client_ip, server_ip))
-            self.flow_manager.send_packet_out(event.ofp.buffer_id, self.mac, server_mac, client_ip, server_ip, server_port, in_port, packet.next)
+            self.flow_manager.send_packet_out(event.ofp.buffer_id, self.mac, server_mac, client_ip, server_ip, server_port, in_port, ip_packet)
             
 
         # Server to Client
@@ -263,9 +265,9 @@ class SimpleLoadBalancer:
             client_port = self.client_table[client_ip]['port']
 
             log.info("send packet out %s  to  %s" % (server_ip, client_ip))
-            self.flow_manager.send_packet_out(event.ofp.buffer_id, self.mac, client_mac, self.lb_ip, client_ip, client_port, in_port, packet.next)
+            self.flow_manager.send_packet_out(event.ofp.buffer_id, self.mac, client_mac, self.lb_ip, client_ip, client_port, in_port, ip_packet)
         elif src_ip in self.servers and dst_ip == self.lb_ip and ip_packet.protocol == pkt.ipv4.ICMP_PROTOCOL:
-            self.handle_ping_request(ip_packet.payload,src_ip)
+            self.handle_ping_packet(ip_packet.payload,src_ip)
             
 
 
