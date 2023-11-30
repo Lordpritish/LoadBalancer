@@ -51,18 +51,29 @@ Ensure that the VM is connected to the internet.
 
 ## Prerequisites
 
-Make sure you have the following prerequisites installed on the Mininet VM:
+Make sure you have the following prerequisites and fixes installed on the Mininet VM:
 
-1. Update the package list:
-
+1. **Update the package list:**
+   
    ```bash
    sudo apt-get update
    ```
 
-2. Install curl:
-
+2. **Install curl:**
+   
    ```bash
    sudo apt-get install curl
+   ```
+
+3. **Fix this line of code in `./pox/lib/packet/packet_utils.py`:**
+   
+   Update the line around 105 in check_sum function , fixes a type conversion err :
+   ```python
+   # start += struct.unpack('H', data[-1]+'\0')[0] # Specify order?
+   ```
+   to:
+   ```python
+   start += struct.unpack('H', bytes([data[-1], 0]))[0]
    ```
 
 ## Setup
@@ -76,7 +87,7 @@ Make sure you have the following prerequisites installed on the Mininet VM:
 2. Copy the all files except mytop.py from the repository into the POX extension folder:
 
    ```bash
-   cp <repository_folder>/files/* ./pox/ext/
+   cp [<repository_folder>/*(except mytop.py)] ./pox/ext/
    ```
 4. Copy the `mytop.py`` from the repository into the mininet exmaples folder:
 
@@ -85,6 +96,33 @@ Make sure you have the following prerequisites installed on the Mininet VM:
    ```
 
 ## Running the Load Balancer
+
+
+This POX controller implements both Static and Dyanamic load balancing algorithm. It supports 4 load balancing algorithms:
+
+1. **Random Balancer (`RANDOM`):** Servers are selected randomly.
+
+2. **Round Robin Balancer (`ROUND_ROBIN`):** Servers are selected in a circular sequence.
+
+3. **Weighted Round Robin Balancer (`WEIGHTED_ROUND_ROBIN`):** Servers are selected based on weights assigned to each server.
+
+4. **Weighted response time (`LEAST_RESPONSE_TIME`):** Averages the response time of each server, and combines that with the number of connections each server has open to determine where to send traffic. 
+
+## Running the Load Balancer Controller
+
+To run the load balancer controller, use the following command:
+
+```bash
+./pox.py log.level --DEBUG LoadBalancer --ip=<controller_ip> --servers=<comma_separated_servers> --alg=<algorithm> --weights=<comma_separated_weights>
+```
+
+- `<controller_ip>`: IP address of the controller.
+- `<comma_separated_servers>`: Comma-separated list of server IP addresses.
+- `<algorithm>`: (Optional) Load balancing algorithm. Available options: 1=`RANDOM`, 2=`ROUND_ROBIN`, 3=`WEIGHTED_ROUND_ROBIN`,
+   4=`LEAST_RESPONSE_TIME`(default is 1=`RANDOM`).
+- `<comma_separated_weights>`: (Optional) Comma-separated list of weights corresponding to each server (required for `WEIGHTED_ROUND_ROBIN` algorithm).
+
+### Example Usage:
 
 1. Navigate to the POX directory:
 
@@ -104,6 +142,21 @@ Make sure you have the following prerequisites installed on the Mininet VM:
    ./pox.py log.level --DEBUG LoadBalancer --ip=10.0.1.1 --servers=10.0.0.1,10.0.0.2,10.0.0.3,10.0.0.4
    ```
 
+   ```bash
+   ./pox.py log.level --DEBUG LoadBalancer --ip=10.0.1.1 --servers=10.0.0.1,10.0.0.2,10.0.0.3,10.0.0.4 --alg=1
+   ```
+
+   ```bash
+   ./pox.py log.level --DEBUG LoadBalancer --ip=10.0.1.1 --servers=10.0.0.1,10.0.0.2,10.0.0.3,10.0.0.4 --alg=3 --weights=1,2,3,4
+   ```
+
+   ```bash
+   ./pox.py log.level --DEBUG LoadBalancer --ip=10.0.1.1 --servers=10.0.0.1,10.0.0.2,10.0.0.3,10.0.0.4 --alg=4 
+   ```
+
+
+
+
 ## Running Mininet Example
 
 1. Go to the root folder of the VM and navigate to the Mininet examples directory:
@@ -118,7 +171,12 @@ Make sure you have the following prerequisites installed on the Mininet VM:
    sudo mn -c
    ```
 
-3. Run the Mininet topology:
+3. Run this command to use xterm
+   ```bash
+   sudo cp ~/.Xauthority ~root/
+   ```
+
+4. Run the Mininet topology:
 
    ```bash
    sudo python ./mytop.py
