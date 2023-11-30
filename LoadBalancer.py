@@ -2,12 +2,9 @@ from pox.core import core
 from pox.lib.addresses import IPAddr, EthAddr
 from FlowRule import FlowRuleManager
 from ArpHandler import ARPHandler
-<<<<<<< HEAD
-from RequestLogWriter import RequestLogWriter
-=======
 from PingHandler import PingHandler
 from LoadBalancingAlgthm import RandomBalancer,RoundRobinBalancer,WeightedRoundRobinBalancer,LoadBalancer, LeastResponseTimeBalancer
->>>>>>> origin/main
+from RequestLogWriter import RequestLogWriter
 import pox.openflow.libopenflow_01 as of
 import time
 import pox.lib.packet as pkt
@@ -258,7 +255,7 @@ class SimpleLoadBalancer:
             client_mac = self.client_table[client_ip]['mac']
     
 
-            self.req_log_writer.write_request(str(server_ip))
+            self.req_log_writer.write_request(str(server_ip), "in")
             
             log.info("send packet out %s  to  %s" % (client_ip, server_ip))
             self.flow_manager.send_packet_out(event.ofp.buffer_id, self.mac, server_mac, client_ip, server_ip, server_port, in_port, ip_packet)
@@ -272,6 +269,8 @@ class SimpleLoadBalancer:
             client_mac = self.client_table[client_ip]['mac']
             client_port = self.client_table[client_ip]['port']
 
+            self.req_log_writer.write_request(str(server_ip), "out")
+
             log.info("send packet out %s  to  %s" % (server_ip, client_ip))
             self.flow_manager.send_packet_out(event.ofp.buffer_id, self.mac, client_mac, self.lb_ip, client_ip, client_port, in_port, ip_packet)
         elif src_ip in self.servers and dst_ip == self.lb_ip and ip_packet.protocol == pkt.ipv4.ICMP_PROTOCOL:
@@ -284,10 +283,6 @@ class SimpleLoadBalancer:
 def launch(ip, servers,alg=RANDOM,weights=None):
     log.info("Loading Simple Load Balancer module")
     servers = servers.split(',')
-<<<<<<< HEAD
-    print(servers)
-    core.registerNew(SimpleLoadBalancer, ip, servers)
-=======
     
     balancing_algorithm = None
     alg = int(alg)
@@ -313,4 +308,3 @@ def launch(ip, servers,alg=RANDOM,weights=None):
         balancing_algorithm = LeastResponseTimeBalancer()
 
     core.registerNew(SimpleLoadBalancer, ip, balancing_algorithm,servers)
->>>>>>> origin/main

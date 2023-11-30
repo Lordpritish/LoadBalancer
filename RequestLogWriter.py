@@ -16,9 +16,11 @@ class RequestLogWriter:
         self.first_req_processed = False
         self.f = open("req_count.txt", "w")
     
-    def write_request(self, server):
+    
+    def write_request(self, server, direction):
         if not self.first_req_processed: 
             self.first_req_processed = True
-            self.start_time = time.time()
-        self.f.write(server + " " + str(time.time() - self.start_time) + "\n")
+            # give extra second so that very fast request is not squashed when plotting
+            self.start_time = time.time() - 1
+        self.f.write(server + " " + str(time.time() - self.start_time) + " " + direction +"\n")
         
