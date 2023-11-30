@@ -15,18 +15,18 @@ def construct_lists_from_file(f):
 
         if direction == "in":
             if server in server_to_in_requests:
-                server_to_in_requests[server].append(float(time))
+                server_to_in_requests[server].append(float(time)*1000)
             else:
-                server_to_in_requests[server] = [0, float(time)]
+                server_to_in_requests[server] = [0, float(time)*1000]
                 server_to_out_requests[server] = [0]
         elif direction == "out":
             if server in server_to_out_requests:
-                server_to_out_requests[server].append(float(time))
+                server_to_out_requests[server].append(float(time)*1000)
             else:
-                server_to_out_requests[server] = [0, float(time)]
+                server_to_out_requests[server] = [0, float(time)*1000]
                 server_to_in_requests[server] = [0]
         
-        lastTime = float(time)
+        lastTime = float(time)*1000
     
 
     return server_to_in_requests, server_to_out_requests, lastTime
@@ -40,7 +40,7 @@ def plot_req_count(server_to_in_requests, lastTime):
             y.append(y[-1])
         plt.plot(x, y, label = server, alpha=0.6)
 
-    plt.xlabel("time (seconds)")
+    plt.xlabel("time (ms)")
     plt.ylabel("number of requests sent through load balancer")
     plt.legend()
     plt.savefig("total_req_count.png")
@@ -56,14 +56,15 @@ def plot_net_req_count(server_to_in_requests, server_to_out_requests, lastTime):
                 y.append(0)
             #append the count if it's incoming and decrement for outgoing requests
             elif t in server_to_in_requests[server]:
-                y.append(y[i-1] + 1)
+                y.append(y[-1] + 1)
             else:
-                y.append(y[i-1] - 1)
+                y.append(y[-1] - 1)
+
         if x[-1] != lastTime:
             x.append(lastTime)
             y.append(y[-1])
         plt.plot(x, y, label = server, alpha = 0.6)
-    plt.xlabel("time (seconds)")
+    plt.xlabel("time (ms)")
     plt.ylabel("number of active connection")
     plt.legend()
     plt.savefig("active_connection.png")
