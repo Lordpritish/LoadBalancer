@@ -84,12 +84,12 @@ Make sure you have the following prerequisites and fixes installed on the Minine
    git clone https://github.com/Lordpritish/LoadBalancer.git
    ```
 
-2. Copy the all files except mytop.py from the repository into the POX extension folder:
+2. Copy the all files except mytop.py, server.py, client.py from the repository into the POX extension folder:
 
    ```bash
    cp [<repository_folder>/*(except mytop.py)] ./pox/ext/
    ```
-4. Copy the `mytop.py`` from the repository into the mininet exmaples folder:
+4. Copy the `mytop.py`, `client.py`, `server.py` from the repository into the mininet exmaples folder:
 
    ```bash
    cp <repository_folder>/mytop.py ~/mininet/examples/
@@ -181,3 +181,18 @@ To run the load balancer controller, use the following command:
    ```bash
    sudo python ./mytop.py
    ```
+
+## Testing
+
+### Start the server script on each server host in Mininet:
+```bash
+h2 python server.py &
+h3 python server.py &
+h4 python server.py &
+# Repeat for other server hosts as needed
+```
+### Run the client script on the client host in Mininet:
+```bash
+h1 python client.py
+```
+
