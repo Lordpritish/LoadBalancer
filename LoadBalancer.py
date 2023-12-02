@@ -253,9 +253,11 @@ class SimpleLoadBalancer:
             server_port = self.server_mac_to_port[server_ip]['port']
             server_mac = self.server_mac_to_port[server_ip]['mac']
             client_mac = self.client_table[client_ip]['mac']
-    
 
-            self.req_log_writer.write_request(str(server_ip), "in")
+            # if ip, we know the connction start with SYN and finished with FIN
+            tcp_found = packet.find('tcp')
+            if (packet.payload.protocol != pkt.ipv4.TCP_PROTOCOL):
+                self.req_log_writer.write_request(str(server_ip), "start")
             
             log.info("send packet out %s  to  %s" % (client_ip, server_ip))
             self.flow_manager.send_packet_out(event.ofp.buffer_id, self.mac, server_mac, client_ip, server_ip, server_port, in_port, ip_packet)
@@ -269,7 +271,14 @@ class SimpleLoadBalancer:
             client_mac = self.client_table[client_ip]['mac']
             client_port = self.client_table[client_ip]['port']
 
-            self.req_log_writer.write_request(str(server_ip), "out")
+            tcp_found = packet.find('tcp')
+            # if IP(TCP), we recognize connection start with server senbding SYN and done by sending FIN
+            if (packet.payload.protocol != pkt.ipv4.TCP_PROTOCOL):
+                self.req_log_writer.write_request(str(server_ip), "done")
+            elif tcp_found.SYN:
+                self.req_log_writer.write_request(str(server_ip), "start")
+            elif tcp_found.FIN:
+                self.req_log_writer.write_request(str(server_ip), "done")
 
             log.info("send packet out %s  to  %s" % (server_ip, client_ip))
             self.flow_manager.send_packet_out(event.ofp.buffer_id, self.mac, client_mac, self.lb_ip, client_ip, client_port, in_port, ip_packet)
