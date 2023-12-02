@@ -185,7 +185,13 @@ To run the load balancer controller, use the following command:
 ## Generating a Plot
 1. After terminating LoadBalancer, it will generate req_count.txt file which contains log of which server the loader balancer redirected the request to.
 
-2. Run the following command to generate a plot of total # of requests to each server over time
+2. Run the following command to generate a to get summary plots of the traffic through the load balanecr
 
    ``` python3 <Path-to-UIGenerator.py> <Path-to_req_count.txt> ```
+
+Following are sample outputs
+
+![Image1](total_req_count.png)
+![Image2](average_connection_time.png)
+![Image3](active_connection.png)
 
