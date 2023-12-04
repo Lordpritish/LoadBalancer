@@ -4,11 +4,12 @@ from FlowRule import FlowRuleManager
 from ArpHandler import ARPHandler
 from PingHandler import PingHandler
 from LoadBalancingAlgthm import RandomBalancer,RoundRobinBalancer,WeightedRoundRobinBalancer,LoadBalancer, LeastResponseTimeBalancer
+from RequestLogWriter import RequestLogWriter
 import pox.openflow.libopenflow_01 as of
 import time
 import pox.lib.packet as pkt
 from enum import Enum
-from pox.lib.packet.icmp import icmp , TYPE_ECHO_REPLY
+from pox.lib.packet.icmp import icmp , TYPE_ECHO_REPLY, TYPE_ECHO_REQUEST
 
 log = core.getLogger()
 RANDOM = 1
@@ -43,6 +44,8 @@ class SimpleLoadBalancer:
         self.ping_timeout = 2  # How long do we wait for an PING reply before we consider a server dead?
       
         self.connections_map = {} # client:port -> server_ip
+
+        self.req_log_writer = RequestLogWriter(servers)
 
     def _do_expire (self):
         """
@@ -103,7 +106,7 @@ class SimpleLoadBalancer:
             # log.info("handle_arp_packet")
             self.handle_arp_packet(packet, event)
         elif packet.type == packet.IP_TYPE:
-            log.info("handle_ip_packet")
+            # log.info("handle_ip_packet")
             self.handle_ip_packet(packet, event)
         else:
             log.info("Unknown Packet type: %s" % packet.type)
@@ -165,6 +168,7 @@ class SimpleLoadBalancer:
             if packet.SYN:
                 # TCP SYN flag is set, indicating the start of the connection
                 log.info("New connection from %s:%s has STARTED", src_ip, src_port)
+                
                 return  src_port,ConnectionStatus.NEW_CONNECTION
             elif packet.FIN or packet.RST:
                 # TCP FIN flag is set, indicating the end of the connection
@@ -246,25 +250,49 @@ class SimpleLoadBalancer:
                     return drop()
             
             log.info("Server selected for client %s: %s" % (client_ip, server_ip))
-            
+    
+
             server_port = self.server_mac_to_port[server_ip]['port']
             server_mac = self.server_mac_to_port[server_ip]['mac']
             client_mac = self.client_table[client_ip]['mac']
-    
 
+
+            #chekc if a ping reequest
+            if ip_packet.protocol != pkt.ipv4.TCP_PROTOCOL:
+                self.req_log_writer.write_request(str(server_ip), "start")
+
+            #  if ip, we know the connction start with SYN and finished with FIN
+            tcp_found = packet.find('tcp')
+            if tcp_found:
+                if tcp_found.SYN:
+                    self.req_log_writer.write_request(str(server_ip), "start")
+                elif tcp_found.FIN:
+                    self.req_log_writer.write_request(str(server_ip), "done")
+
+            
             log.info("send packet out %s  to  %s" % (client_ip, server_ip))
+            self.balancing_algorithm.increment_connections(server_ip)
             self.flow_manager.send_packet_out(event.ofp.buffer_id, self.mac, server_mac, client_ip, server_ip, server_port, in_port, ip_packet)
             
 
         # Server to Client
         elif src_ip in self.servers and (dst_ip in self.client_table.keys()):
+
             log.info("Server to Client")
+            
             server_ip , client_ip = src_ip,dst_ip
+
+            self.balancing_algorithm.decrement_connections(server_ip)
 
             client_mac = self.client_table[client_ip]['mac']
             client_port = self.client_table[client_ip]['port']
 
+            if ip_packet.protocol != pkt.ipv4.TCP_PROTOCOL :
+                self.req_log_writer.write_request(str(server_ip), "done")
+          
+
             log.info("send packet out %s  to  %s" % (server_ip, client_ip))
+
             self.flow_manager.send_packet_out(event.ofp.buffer_id, self.mac, client_mac, self.lb_ip, client_ip, client_port, in_port, ip_packet)
         elif src_ip in self.servers and dst_ip == self.lb_ip and ip_packet.protocol == pkt.ipv4.ICMP_PROTOCOL:
             self.handle_ping_packet(ip_packet.payload,src_ip)

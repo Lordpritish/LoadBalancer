@@ -78,22 +78,19 @@ Make sure you have the following prerequisites and fixes installed on the Minine
 
 ## Setup
 
-1. Clone this repository:
+1. Clone this repository and cd into the LoadBalancer folder:
 
    ```bash
    git clone https://github.com/Lordpritish/LoadBalancer.git
    ```
 
-2. Copy the all files except mytop.py from the repository into the POX extension folder:
+2. To copy the files to the appropiate folder run this cmd .This moves the pox related file to ~/pox/ext and mininet files to ~/mininet/examples:
 
    ```bash
-   cp [<repository_folder>/*(except mytop.py)] ./pox/ext/
+   chmod +x copy_files.sh
+   ./copy_files.sh
    ```
-4. Copy the `mytop.py`` from the repository into the mininet exmaples folder:
 
-   ```bash
-   cp <repository_folder>/mytop.py ~/mininet/examples/
-   ```
 
 ## Running the Load Balancer
 
@@ -181,3 +178,19 @@ To run the load balancer controller, use the following command:
    ```bash
    sudo python ./mytop.py
    ```
+
+## Generating a Plot
+1. After terminating LoadBalancer, it will generate req_count.txt file which contains log of which server the loader balancer redirected the request to.
+
+2. Run the following command to generate a to get summary plots of the traffic through the load balanecr. Note the generators is in ~/pox/ext and the req_count.txt is in ~/pox
+
+   ``` python3 <Path-to-UIGenerator.py> <Path-to_req_count.txt> ```
+
+Following are sample outputs
+
+
+![Image1](req_sent_over_time.png)
+![Image2](num_req_per_server.png)
+![Image3](average_response_time.png)
+![Image4](active_connection.png)
+
