@@ -182,7 +182,7 @@ class SimpleLoadBalancer:
     def _handle_new_connection(self, client_ip,client_port):
         server_ip = self.balancing_algorithm.get_next_server()
         if server_ip:
-           
+            self.balancing_algorithm.increment_connections(server_ip)
             self.connections_map[str(client_ip) + str(client_port)] = server_ip
             log.info("New connection from %s:%s to %s has started", client_ip,client_port,server_ip)
 
@@ -192,7 +192,7 @@ class SimpleLoadBalancer:
     def _handle_connection_ended(self, client_ip,client_port):
         server_ip = self.connections_map.get(str(client_ip)  + str(client_port), None)
         if server_ip:
-            
+            self.balancing_algorithm.decrement_connections(server_ip)
             del self.connections_map[str(client_ip)  + str(client_port)]
             log.info(self.connections_map)
             log.info("Connection from %s:%s to %s has ENDED", client_ip,client_port,server_ip)

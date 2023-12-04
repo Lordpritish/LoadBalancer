@@ -164,6 +164,3 @@ class WeightedRoundRobinBalancer(RoundRobinBalancer):
             
 
             self.current_server_index = (self.current_server_index + 1) % self.number_of_servers
-
-
-

@@ -68,6 +68,7 @@ def plot_req_over_time_count(server_to_start_connection, lastTime):
     plt.xlabel("time (ms)")
     plt.ylabel("# of requests sent to Server over time")
     plt.savefig("req_sent_over_time.png")
+    plt.legend()
     plt.clf()
 
 def plot_net_req_count(server_to_start_connection, server_to_done_connection, lastTime):
@@ -94,6 +95,7 @@ def plot_net_req_count(server_to_start_connection, server_to_done_connection, la
         plt.plot(x, y, label = server, alpha = 0.6, linewidth=1)
     plt.xlabel("time (ms)")
     plt.ylabel("number of active connection")
+    plt.legend()
     plt.savefig("active_connection.png")
     plt.clf()
 
@@ -110,6 +112,7 @@ def plot_average_response_time(server_to_start_connection, server_to_done_connec
     plt.bar(x, y, width = 0.3)
     plt.xlabel("server")
     plt.ylabel("Average Response time (ms)")
+    plt.legend(fontsize="x-large")
     plt.savefig("average_response_time.png")
     plt.clf()
 

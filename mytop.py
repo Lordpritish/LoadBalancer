@@ -37,10 +37,11 @@ def myNetwork():
 
     info('*** Add links\n')
     for host in hosts.values():
-        if str(host) == 'h1' or str(host) == 'h2':
-            net.addLink(host, s1, cls=TCLink, delay='1ms')
+        if str(host) == 'h3' or str(host) == 'h4':
+            net.addLink(host, s1, cls=TCLink, delay='50ms')
         else:
-            net.addLink(host, s1, cls=TCLink, delay='10ms')
+            net.addLink(host, s1, cls=TCLink, delay='1ms')
+            
 
 
 
