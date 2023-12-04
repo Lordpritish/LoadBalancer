@@ -1,5 +1,8 @@
 import random
 
+from pox.core import core
+log = core.getLogger()
+
 class LoadBalancer:
     def __init__(self):
         self.live_servers = [] # [IP]
@@ -96,8 +99,7 @@ class LeastResponseTimeBalancer(LoadBalancer):
         else:
             chosen_server = lowest_active_servers[0]
 
-        # Update active connections and return the chosen server
-        self.active_connections[chosen_server] += 1
+
         return chosen_server
     
 
